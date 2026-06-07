@@ -1,0 +1,245 @@
+swagger: "2.0"
+info:
+  description: "This is specification for water level gauge central service. It has several APIs designed for supplying data to frontend as well as backend APIs for devices to communicate with it."
+  version: "1.0.0"
+  title: "Swagger Water Level Gauge-er 2.0"
+  contact:
+    email: "spulkit489@gmail.com"
+  license:
+    name: "Apache 2.0"
+    url: "http://www.apache.org/licenses/LICENSE-2.0.html"
+host: "gauger.orchestrator.swagger.io"
+basePath: "/api"
+schemes:
+- "http"
+paths:
+  /water/level:
+    get:
+      tags:
+      - "Water Level"
+      description: "Retrieves the current water level of the tank, along with total tank capacity."
+      operationId: "getWaterLevel"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      responses:
+        200:
+          description: "Retrived water level successfully"
+          schema:
+            $ref: "#/definitions/WaterLevel"
+        default:
+          description: "Error encountered"
+          schema:
+            $ref: "#/definitions/Error"
+    post:
+      tags:
+      - "Water Level"
+      summary: "Stores the current water level reading in the database."
+      operationId: "saveWaterLevel"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        required: true
+        schema:
+          type: object
+          properties:
+            emptyWaterDepth:
+              type: integer
+              description: depth of empty volume in tank.
+      responses:
+        200:
+          description: Current water level stored successfully.
+        default:
+          description: "Error encountered"
+          schema:
+            $ref: "#/definitions/Error"
+  /configuration:
+    post:
+      tags:
+        - "Configuration"
+      summary: "Store static configuration"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "Configuration"
+        required: true
+        schema:
+          $ref: "#/definitions/Configuration"
+      responses:
+        200:
+          description: Configuration stored successfully
+        default:
+          description: "Error encountered"
+          schema:
+            $ref: "#/definitions/Error"
+    get:
+      tags:
+        - "Configuration"
+      summary: "Retrieve static configuration"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: Configuration fetched successfully
+          schema:
+            $ref: "#/definitions/Configuration"
+        default:
+          description: "Error encountered"
+          schema:
+            $ref: "#/definitions/Error"
+
+  /water/level/history:
+    get:
+      tags:
+        - "Water Level"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - $ref: "#/parameters/PageNumber"
+      - $ref: "#/parameters/ItemsPerPage"
+      responses:
+        200:
+          description: Water Level History successfully fetched
+          schema:
+            type: object
+            properties:
+              Entries:
+                type: array
+                items:
+                  $ref: '#/definitions/WaterLevel'
+              TotalEntries:
+                type: integer
+                description: total number of entries, for pagination
+        default:
+          description: "Error encountered"
+          schema:
+            $ref: "#/definitions/Error"
+  /water/anomaly:
+    get:
+      tags:
+        - "Water Level Anomaly"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: Fetched Water Anomaly successfully
+          schema:
+            $ref: "#/definitions/WaterLevelAnomaly"
+        default:
+          description: "Error encountered"
+          schema:
+            $ref: "#/definitions/Error"
+  /water/anomaly/history:
+    get:
+      tags:
+        - "Water Level Anomaly"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - $ref: "#/parameters/PageNumber"
+      - $ref: "#/parameters/ItemsPerPage"
+      responses:
+        200:
+          description: Fetched Water Anomaly History successfully
+          schema:
+            type: object
+            properties:
+              Entries:
+                type: array
+                items:
+                  $ref: '#/definitions/WaterLevelAnomaly'
+              TotalEntries:
+                type: integer
+                description: total number of entries, for pagination
+        default:
+          description: "Error encountered"
+          schema:
+            $ref: "#/definitions/Error"
+
+definitions:
+  WaterLevel:
+    type: "object"
+    properties:
+      totalVolume:
+        type: integer
+        description: total volume of tank (in L)
+      waterVolume:
+        type: integer
+        description: total volume of water present (in L)
+      reportedAt:
+        type: string
+        format: date-time
+        description: when was last reading recorded.
+  WaterLevelAnomaly:
+    type: "object"
+    properties:
+      observedFlowRate:
+        type: integer
+        description: observed flow rate in L/s
+      thresholdFlowRate:
+        type: integer
+        description: threshold flow rate in L/s
+      reportedAt:
+        type: string
+        format: date-time
+        description: when was last reading recorded.
+  Error:
+    type: object
+    properties:
+      code:
+        type: integer
+      message:
+        type: string
+        description: Error description in human understandable language
+  Configuration:
+    type: object
+    properties:
+      DeviceIP:
+        type: string
+        description: IP of gauging device, required in IOT mode
+        pattern: '(\b25[0-5]|\b2[0-4][0-9]|\b[01]?[0-9][0-9]?)(\.(25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)){3}'
+      DevicePort:
+        type: integer
+        description: Port on which gauging device is listening, required in IOT mode.
+        example: 31028
+      WaterFlowThreshold:
+        type: integer
+        description: water flow threshold in L/s, against which water flow anomaly is declared. If it is set to 0, that means anomaly detection is turned off.
+      WaterTankTotalVolume:
+        type: integer
+        description: Total Volume of Water Tank in Litres.
+        example: 1000
+      WaterTankDiameter:
+        type: integer
+        description: Diameter of water tank (assumption is water tank is cylindrical) in cm.
+        example: 123
+
+parameters:
+  PageNumber:
+    in: "query"
+    name: "pageNumber"
+    type: integer
+    description: page number to be fetched
+    default: 0
+  ItemsPerPage:
+    in: "query"
+    name: "itemsPerPage"
+    type: integer
+    description: items per page to be fetched
+    default: 0
